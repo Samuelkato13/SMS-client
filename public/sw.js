@@ -1,8 +1,8 @@
 // ZaabuPay Service Worker v1.0
 // Handles caching + offline fallback for PWA
 
-const CACHE_NAME = 'zaabupay-v2';
-const API_CACHE = 'zaabupay-api-v2';
+const CACHE_NAME = 'zaabupay-v3';
+const API_CACHE = 'zaabupay-api-v3';
 
 // Static shell assets to cache on install
 const SHELL_ASSETS = [
@@ -61,6 +61,12 @@ self.addEventListener('fetch', event => {
   // Skip non-GET, chrome-extension, etc.
   if (request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
+
+  // Vite emits hashed files under /assets/. Do NOT intercept — cache-first SW here
+  // often serves stale HTML or wrong responses and breaks all CSS/JS (unstyled app).
+  if (url.pathname.startsWith('/assets/')) {
+    return;
+  }
 
   // API calls: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/')) {
