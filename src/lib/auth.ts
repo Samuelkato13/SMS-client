@@ -62,6 +62,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
     const res = await fetch(`/api/auth/user?id=${encodeURIComponent(uid)}`);
     if (!res.ok) return null;
     const data = await res.json();
+    if (!data || Array.isArray(data) || typeof data !== 'object' || !data.id) return null;
 
     return {
       id: data.id,

@@ -1,8 +1,8 @@
 // ZaabuPay Service Worker v1.0
 // Handles caching + offline fallback for PWA
 
-const CACHE_NAME = 'zaabupay-v1';
-const API_CACHE = 'zaabupay-api-v1';
+const CACHE_NAME = 'zaabupay-v2';
+const API_CACHE = 'zaabupay-api-v2';
 
 // Static shell assets to cache on install
 const SHELL_ASSETS = [
@@ -77,14 +77,16 @@ self.addEventListener('fetch', event => {
           const cached = await caches.match(request, { cacheName: API_CACHE });
           if (cached) return cached;
         }
-        // Return empty array for list endpoints so UI shows empty state
-        const pathname = url.pathname;
-        if (pathname.includes('/api/')) {
+        // Only fake empty lists for endpoints we explicitly cache (never auth/user, etc.)
+        if (shouldCache && url.pathname.startsWith('/api/')) {
           return new Response(JSON.stringify([]), {
             headers: { 'Content-Type': 'application/json', 'X-From-SW-Cache': 'true' }
           });
         }
-        return new Response('Offline', { status: 503 });
+        return new Response(JSON.stringify({ message: 'Network error' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
       })
     );
     return;
