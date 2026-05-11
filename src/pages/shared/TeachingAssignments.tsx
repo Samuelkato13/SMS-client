@@ -12,13 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Trash2, UserPlus, GraduationCap, BookMarked } from 'lucide-react';
 
-type Variant = 'director' | 'headteacher';
+type Variant = 'director' | 'headteacher' | 'embedded';
 
 export default function TeachingAssignments({ variant }: { variant: Variant }) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const schoolId = profile?.schoolId;
-  const assignerUserId = profile?.id;
+  const managerId = profile?.id;
 
   const [ctUserId, setCtUserId] = useState('');
   const [ctClassId, setCtClassId] = useState('');
@@ -27,9 +27,16 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
   const [scSubjectId, setScSubjectId] = useState('');
 
   const { data: bundle, isLoading } = useQuery({
-    queryKey: ['/api/staff-assignments', schoolId],
-    queryFn: () => fetch(`/api/staff-assignments?schoolId=${schoolId}`).then((r) => r.json()),
-    enabled: !!schoolId,
+    queryKey: ['/api/staff-assignments', schoolId, managerId],
+    queryFn: () =>
+      fetch(
+        `/api/staff-assignments?schoolId=${encodeURIComponent(schoolId!)}&managerUserId=${encodeURIComponent(managerId!)}`
+      ).then(async (r) => {
+        const text = await r.text();
+        if (!r.ok) throw new Error(text || r.statusText);
+        return JSON.parse(text);
+      }),
+    enabled: !!schoolId && !!managerId,
   });
 
   const { data: users = [] } = useQuery<any[]>({
@@ -53,7 +60,7 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
   const staffList = users.filter((u: any) => !['super_admin', 'director'].includes(u.role));
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/staff-assignments', schoolId] });
+    queryClient.invalidateQueries({ queryKey: ['/api/staff-assignments', schoolId, managerId] });
     queryClient.invalidateQueries({ queryKey: ['/api/classes', schoolId] });
   };
 
@@ -63,7 +70,7 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
         userId: ctUserId,
         classId: ctClassId,
         schoolId,
-        assignerUserId,
+        assignerUserId: managerId,
       }),
     onSuccess: () => {
       toast({ title: 'Class teacher assignment saved' });
@@ -71,7 +78,7 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
       setCtClassId('');
       invalidate();
     },
-    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   const addSc = useMutation({
@@ -81,36 +88,42 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
         classId: scClassId,
         subjectId: scSubjectId,
         schoolId,
-        assignerUserId,
+        assignerUserId: managerId,
       }),
     onSuccess: () => {
-      toast({ title: 'Subject-class assignment saved' });
+      toast({ title: 'Subject–class assignment saved' });
       setScUserId('');
       setScClassId('');
       setScSubjectId('');
       invalidate();
     },
-    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   const delCt = useMutation({
     mutationFn: (id: string) =>
-      apiRequest('DELETE', `/api/staff-assignments/class-teacher/${id}?assignerUserId=${encodeURIComponent(assignerUserId!)}&schoolId=${encodeURIComponent(schoolId!)}`),
+      apiRequest(
+        'DELETE',
+        `/api/staff-assignments/class-teacher/${id}?assignerUserId=${encodeURIComponent(managerId!)}&schoolId=${encodeURIComponent(schoolId!)}`
+      ),
     onSuccess: () => {
       toast({ title: 'Removed' });
       invalidate();
     },
-    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   const delSc = useMutation({
     mutationFn: (id: string) =>
-      apiRequest('DELETE', `/api/staff-assignments/subject-class/${id}?assignerUserId=${encodeURIComponent(assignerUserId!)}&schoolId=${encodeURIComponent(schoolId!)}`),
+      apiRequest(
+        'DELETE',
+        `/api/staff-assignments/subject-class/${id}?assignerUserId=${encodeURIComponent(managerId!)}&schoolId=${encodeURIComponent(schoolId!)}`
+      ),
     onSuccess: () => {
       toast({ title: 'Removed' });
       invalidate();
     },
-    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   const classTeachers = bundle?.classTeachers ?? [];
@@ -121,31 +134,45 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
       <div>
         <h1 className="text-xl font-bold text-gray-900">Teaching assignments</h1>
         <p className="text-sm text-gray-500 mt-1">
-          One staff member can be a <strong>class teacher</strong> for a class and also teach specific <strong>subjects in other classes</strong> (e.g. P1 English + P4 Science). Assignments here control who may
-          <strong> record marks</strong> for those classes/subjects. Admin, director, and head teacher can manage this.
+          Assign who is the <strong>class teacher</strong> for each class, and which <strong>subject + class</strong> pairs each staff member teaches (for example: P1 English and P4 Science for the same person). These rules control who can{' '}
+          <strong>record marks</strong> for each class and subject. Directors, head teachers, and school admins can manage this.
         </p>
       </div>
 
-      {!schoolId || !assignerUserId ? (
-        <Card><CardContent className="py-8 text-sm text-gray-500">No school context — sign in again.</CardContent></Card>
+      {!schoolId || !managerId ? (
+        <Card>
+          <CardContent className="py-8 text-sm text-gray-500">
+            Your account needs a school before you can manage assignments.
+          </CardContent>
+        </Card>
       ) : (
         <Tabs defaultValue="class">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="class" className="gap-2"><GraduationCap className="w-4 h-4" />Class teacher</TabsTrigger>
-            <TabsTrigger value="subject" className="gap-2"><BookMarked className="w-4 h-4" />Subject in class</TabsTrigger>
+            <TabsTrigger value="class" className="gap-2">
+              <GraduationCap className="w-4 h-4" />
+              Class teacher
+            </TabsTrigger>
+            <TabsTrigger value="subject" className="gap-2">
+              <BookMarked className="w-4 h-4" />
+              Subject in class
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="class" className="mt-4 space-y-4">
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Add class teacher assignment</CardTitle>
-                <CardDescription>Links a staff member to a class (homeroom / class teacher duties and marks entry for that class).</CardDescription>
+                <CardDescription>
+                  Links a staff member to a class. If the class has no homeroom teacher yet, this also fills that field.
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-3 items-end">
                 <div className="min-w-[200px] flex-1">
                   <Label className="text-xs">Staff member</Label>
                   <Select value={ctUserId || undefined} onValueChange={setCtUserId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select user" /></SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
                     <SelectContent>
                       {staffList.map((u: any) => (
                         <SelectItem key={u.id} value={u.id}>
@@ -158,10 +185,15 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                 <div className="min-w-[180px] flex-1">
                   <Label className="text-xs">Class</Label>
                   <Select value={ctClassId || undefined} onValueChange={setCtClassId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
                     <SelectContent>
                       {classes.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name} {c.level ? `· ${c.level}` : ''}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                          {c.level ? ` · ${c.level}` : ''}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -171,13 +203,16 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                   disabled={!ctUserId || !ctClassId || addCt.isPending}
                   onClick={() => addCt.mutate()}
                 >
-                  <UserPlus className="w-4 h-4" />Save
+                  <UserPlus className="w-4 h-4" />
+                  Save
                 </Button>
               </CardContent>
             </Card>
 
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-base">Current class teacher assignments</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Current class teacher assignments</CardTitle>
+              </CardHeader>
               <CardContent className="p-0">
                 {isLoading ? (
                   <p className="p-6 text-sm text-gray-500">Loading…</p>
@@ -195,10 +230,18 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                     <tbody className="divide-y">
                       {classTeachers.map((row: any) => (
                         <tr key={row.id}>
-                          <td className="px-4 py-2">{row.first_name} {row.last_name} <span className="text-gray-400 text-xs">({row.user_role})</span></td>
+                          <td className="px-4 py-2">
+                            {row.first_name} {row.last_name}{' '}
+                            <span className="text-gray-400 text-xs">({row.user_role})</span>
+                          </td>
                           <td className="px-4 py-2">{row.class_name}</td>
                           <td className="px-2">
-                            <Button variant="ghost" size="sm" className="text-red-600 h-8" onClick={() => delCt.mutate(row.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 h-8"
+                              onClick={() => delCt.mutate(row.id)}
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </td>
@@ -215,13 +258,17 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Add subject + class assignment</CardTitle>
-                <CardDescription>Example: same person teaches English in P.1 and Science in P.4 — add one row per subject-class pair.</CardDescription>
+                <CardDescription>
+                  One row per combination (e.g. English in P1, Science in P4). The same teacher can have several rows.
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-3 items-end">
                 <div className="min-w-[200px] flex-1">
                   <Label className="text-xs">Staff member</Label>
                   <Select value={scUserId || undefined} onValueChange={setScUserId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select user" /></SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
                     <SelectContent>
                       {staffList.map((u: any) => (
                         <SelectItem key={u.id} value={u.id}>
@@ -234,10 +281,14 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                 <div className="min-w-[160px] flex-1">
                   <Label className="text-xs">Class</Label>
                   <Select value={scClassId || undefined} onValueChange={setScClassId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Class" /></SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Class" />
+                    </SelectTrigger>
                     <SelectContent>
                       {classes.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -245,10 +296,14 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                 <div className="min-w-[160px] flex-1">
                   <Label className="text-xs">Subject</Label>
                   <Select value={scSubjectId || undefined} onValueChange={setScSubjectId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Subject" /></SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Subject" />
+                    </SelectTrigger>
                     <SelectContent>
                       {subjects.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name} ({s.code})</SelectItem>
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} ({s.code})
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -258,13 +313,16 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                   disabled={!scUserId || !scClassId || !scSubjectId || addSc.isPending}
                   onClick={() => addSc.mutate()}
                 >
-                  <UserPlus className="w-4 h-4" />Save
+                  <UserPlus className="w-4 h-4" />
+                  Save
                 </Button>
               </CardContent>
             </Card>
 
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-base">Subject–class assignments</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Subject–class assignments</CardTitle>
+              </CardHeader>
               <CardContent className="p-0">
                 {isLoading ? (
                   <p className="p-6 text-sm text-gray-500">Loading…</p>
@@ -283,11 +341,18 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
                     <tbody className="divide-y">
                       {subjectClass.map((row: any) => (
                         <tr key={row.id}>
-                          <td className="px-4 py-2">{row.first_name} {row.last_name}</td>
+                          <td className="px-4 py-2">
+                            {row.first_name} {row.last_name}
+                          </td>
                           <td className="px-4 py-2">{row.class_name}</td>
                           <td className="px-4 py-2">{row.subject_name}</td>
                           <td className="px-2">
-                            <Button variant="ghost" size="sm" className="text-red-600 h-8" onClick={() => delSc.mutate(row.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 h-8"
+                              onClick={() => delSc.mutate(row.id)}
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </td>
@@ -305,5 +370,6 @@ export default function TeachingAssignments({ variant }: { variant: Variant }) {
   );
 
   if (variant === 'director') return <DirectorLayout>{inner}</DirectorLayout>;
-  return <HTLayout>{inner}</HTLayout>;
+  if (variant === 'headteacher') return <HTLayout>{inner}</HTLayout>;
+  return inner;
 }
