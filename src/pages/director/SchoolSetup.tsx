@@ -867,7 +867,7 @@ export default function SchoolSetup() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1">
-              <Label>Subject name *</Label>
+              <Label>Subject naame *</Label>
               <Input
                 value={subjectForm.name}
                 onChange={(e) => setSubjectForm((f) => ({ ...f, name: e.target.value }))}
