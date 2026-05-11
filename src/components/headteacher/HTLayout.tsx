@@ -4,7 +4,7 @@ import { ZaabuPayLogo } from '@/components/ui/ZaabuPayLogo';
 import {
   LayoutDashboard, CalendarDays, Users, UserSquare2, ClipboardList,
   BarChart3, FileText, CreditCard, Menu, LogOut, ChevronRight,
-  Bell, X, TrendingUp, Layers
+  Bell, X, TrendingUp, Layers, BookOpen, ListChecks
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,8 @@ const NAV: NavItem[] = [
   { label: 'Dashboard',           href: '/headteacher',                 icon: LayoutDashboard },
   { label: 'Academic Calendar',   href: '/headteacher/calendar',        icon: CalendarDays    },
   { label: 'Teacher Management',  href: '/headteacher/teachers',        icon: Users           },
+  { label: 'Teaching assignments', href: '/headteacher/teaching-assignments', icon: ListChecks },
+  { label: 'Subjects',            href: '/headteacher/subjects',         icon: BookOpen        },
   { label: 'Students',            href: '/headteacher/students',        icon: UserSquare2     },
   { label: 'Exam Management',     href: '/headteacher/exams',           icon: ClipboardList   },
   { label: 'Reports Hub',          href: '/headteacher/performance',     icon: BarChart3       },
