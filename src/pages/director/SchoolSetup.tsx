@@ -408,7 +408,7 @@ export default function SchoolSetup() {
             </Card>
           </TabsContent>
 
-          {/* Subjects */}
+          {/* Subjects — director & school admin (same panel); head teacher uses main Subjects page */}
           <TabsContent value="subjects" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between gap-2">
@@ -435,8 +435,8 @@ export default function SchoolSetup() {
                     {subjects.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
-                          <p>No subjects yet. Use &quot;Add subject&quot; above.</p>
-                          <p className="text-xs mt-2 text-gray-500">Head teachers can also open <strong>Subjects</strong> from the head teacher menu.</p>
+                          <p>No subjects yet. Use &quot;Add subject&quot; to create English, Mathematics, Science, etc.</p>
+                          <p className="text-xs mt-2 text-gray-500">Head teachers can also add subjects from the main menu → Subjects.</p>
                         </td>
                       </tr>
                     ) : (subjects as any[]).map(s => (
@@ -481,82 +481,6 @@ export default function SchoolSetup() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Add / Edit Subject */}
-      <Dialog
-        open={showSubjectForm}
-        onOpenChange={(open) => {
-          setShowSubjectForm(open);
-          if (!open) {
-            setEditingSubject(null);
-            setSubjectForm({ name: '', code: '', description: '' });
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{editingSubject ? 'Edit subject' : 'Add subject'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1">
-              <Label>Subject name *</Label>
-              <Input
-                value={subjectForm.name}
-                onChange={(e) => setSubjectForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. English"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Code *</Label>
-              <Input
-                value={subjectForm.code}
-                onChange={(e) => setSubjectForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                placeholder="e.g. ENG"
-                className="font-mono"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Description (optional)</Label>
-              <Input
-                value={subjectForm.description}
-                onChange={(e) => setSubjectForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Short note"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSubjectForm(false)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                const name = subjectForm.name.trim();
-                const code = subjectForm.code.trim();
-                if (!name || !code) {
-                  toast({ variant: 'destructive', title: 'Name and code are required' });
-                  return;
-                }
-                if (editingSubject) {
-                  updateSubject.mutate({ id: editingSubject.id, name, code });
-                } else {
-                  createSubject.mutate({
-                    name,
-                    code,
-                    description: subjectForm.description.trim() || undefined,
-                    schoolId: schoolId!,
-                  });
-                }
-              }}
-              disabled={createSubject.isPending || updateSubject.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {createSubject.isPending || updateSubject.isPending
-                ? 'Saving...'
-                : editingSubject
-                  ? 'Save changes'
-                  : 'Create subject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Add Academic Year */}
       <Dialog open={showYearForm} onOpenChange={setShowYearForm}>
@@ -639,6 +563,82 @@ export default function SchoolSetup() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowClassForm(false)}>Cancel</Button>
             <Button onClick={() => { if (classForm.name) createClass.mutate({ ...classForm, schoolId }); }} disabled={!classForm.name || createClass.isPending} className="bg-blue-600 hover:bg-blue-700">{createClass.isPending ? 'Saving...' : 'Create'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Subject */}
+      <Dialog
+        open={showSubjectForm}
+        onOpenChange={(open) => {
+          setShowSubjectForm(open);
+          if (!open) {
+            setEditingSubject(null);
+            setSubjectForm({ name: '', code: '', description: '' });
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingSubject ? 'Edit subject' : 'Add subject'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label>Subject name *</Label>
+              <Input
+                value={subjectForm.name}
+                onChange={(e) => setSubjectForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. English"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Code *</Label>
+              <Input
+                value={subjectForm.code}
+                onChange={(e) => setSubjectForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="e.g. ENG"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Description (optional)</Label>
+              <Input
+                value={subjectForm.description}
+                onChange={(e) => setSubjectForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Short note"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSubjectForm(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                const name = subjectForm.name.trim();
+                const code = subjectForm.code.trim();
+                if (!name || !code) {
+                  toast({ variant: 'destructive', title: 'Name and code are required' });
+                  return;
+                }
+                if (editingSubject) {
+                  updateSubject.mutate({ id: editingSubject.id, name, code });
+                } else {
+                  createSubject.mutate({
+                    name,
+                    code,
+                    description: subjectForm.description.trim() || undefined,
+                    schoolId: schoolId!,
+                  });
+                }
+              }}
+              disabled={createSubject.isPending || updateSubject.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {createSubject.isPending || updateSubject.isPending
+                ? 'Saving...'
+                : editingSubject
+                  ? 'Save changes'
+                  : 'Create subject'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
