@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, CheckCircle2, School, CalendarDays, BookOpen, Layers, Users2, GitBranch, Upload, Landmark } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle2, School, CalendarDays, BookOpen, Layers, Users2, GitBranch, Upload, Landmark, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSchoolContext } from '@/contexts/SchoolContext';
 
@@ -20,6 +20,66 @@ const NURSERY_CLASSES = ['Baby Class', 'Middle Class', 'Top Class'];
 const PRIMARY_CLASSES = ['P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'];
 const SECONDARY_CLASSES = ['S.1', 'S.2', 'S.3', 'S.4', 'S.5', 'S.6'];
 const CLASS_SUGGESTIONS: Record<string, string[]> = { Nursery: NURSERY_CLASSES, Primary: PRIMARY_CLASSES, Secondary: SECONDARY_CLASSES };
+
+// Subject suggestions by section
+const SUBJECT_SUGGESTIONS: Record<string, { name: string; code: string }[]> = {
+  Nursery: [
+    { name: 'Literacy', code: 'LIT' },
+    { name: 'Numeracy', code: 'NUM' },
+    { name: 'Environmental Studies', code: 'ENV' },
+    { name: 'Creative Arts', code: 'ART' },
+    { name: 'Physical Education', code: 'PE' },
+    { name: 'Music', code: 'MUS' },
+    { name: 'Religious Education', code: 'RE' },
+    { name: 'Free Play', code: 'PLY' },
+  ],
+  Primary: [
+    { name: 'English', code: 'ENG' },
+    { name: 'Mathematics', code: 'MTH' },
+    { name: 'Science', code: 'SCI' },
+    { name: 'Social Studies', code: 'SST' },
+    { name: 'Religious Education', code: 'RE' },
+    { name: 'Kiswahili', code: 'KIS' },
+    { name: 'Physical Education', code: 'PE' },
+    { name: 'Art and Design', code: 'ART' },
+    { name: 'Music', code: 'MUS' },
+    { name: 'ICT', code: 'ICT' },
+    { name: 'Luganda', code: 'LUG' },
+    { name: 'French', code: 'FRN' },
+    { name: 'Local Language', code: 'LOC' },
+  ],
+  Secondary: [
+    { name: 'English', code: 'ENG' },
+    { name: 'Mathematics', code: 'MTH' },
+    { name: 'Physics', code: 'PHY' },
+    { name: 'Chemistry', code: 'CHM' },
+    { name: 'Biology', code: 'BIO' },
+    { name: 'History', code: 'HIS' },
+    { name: 'Geography', code: 'GEO' },
+    { name: 'Commerce', code: 'COM' },
+    { name: 'Accounts', code: 'ACC' },
+    { name: 'Agriculture', code: 'AGR' },
+    { name: 'Fine Art', code: 'FAR' },
+    { name: 'Literature', code: 'LIT' },
+    { name: 'Kiswahili', code: 'KIS' },
+    { name: 'French', code: 'FRN' },
+    { name: 'ICT', code: 'ICT' },
+    { name: 'Technical Drawing', code: 'TDR' },
+    { name: 'Entrepreneurship', code: 'ENT' },
+    { name: 'Religious Education', code: 'RE' },
+    { name: 'Physical Education', code: 'PE' },
+    { name: 'German', code: 'GER' },
+    { name: 'Arabic', code: 'ARB' },
+    { name: 'Luganda', code: 'LUG' },
+  ],
+};
+
+// Common subjects for all sections
+const COMMON_SUBJECTS: { name: string; code: string }[] = [
+  { name: 'English', code: 'ENG' },
+  { name: 'Mathematics', code: 'MTH' },
+  { name: 'Physical Education', code: 'PE' },
+];
 
 export default function SchoolSetup() {
   const { toast } = useToast();
@@ -57,6 +117,7 @@ export default function SchoolSetup() {
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [subjectForm, setSubjectForm] = useState({ name: '', code: '', description: '' });
   const [editingSubject, setEditingSubject] = useState<any | null>(null);
+  const [subjectSuggestionSection, setSubjectSuggestionSection] = useState('Primary');
 
   const { data: academicYears = [], isLoading: loadingYears } = useQuery<any[]>({ queryKey: ['/api/academic-years', schoolId], queryFn: () => fetch(`/api/academic-years?schoolId=${schoolId}`).then(r => r.json()), enabled: !!schoolId });
   const { data: terms = [] } = useQuery<any[]>({ queryKey: ['/api/terms', schoolId], queryFn: () => fetch(`/api/terms?schoolId=${schoolId}`).then(r => r.json()), enabled: !!schoolId });
@@ -105,6 +166,44 @@ export default function SchoolSetup() {
   });
   const activateYear = useMutation({ mutationFn: (id: string) => apiRequest('PUT', `/api/academic-years/${id}/activate`, {}), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/academic-years', schoolId] }); toast({ title: 'Academic year activated' }); } });
 
+  // Bulk add subjects
+  const bulkAddSubjects = useMutation({
+    mutationFn: async (subjects: { name: string; code: string; description?: string; schoolId: string }[]) => {
+      const results = [];
+      for (const sub of subjects) {
+        try {
+          await apiRequest('POST', '/api/subjects', { 
+            name: sub.name, 
+            code: sub.code, 
+            description: sub.description || null, 
+            schoolId: sub.schoolId, 
+            teacherId: null 
+          });
+          results.push({ success: true, name: sub.name });
+        } catch (e: any) {
+          results.push({ success: false, name: sub.name, error: e.message });
+        }
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/subjects', schoolId] });
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      if (failCount === 0) {
+        toast({ title: 'Subjects added', description: `Successfully added ${successCount} subject(s)` });
+      } else {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Some subjects failed', 
+          description: `Added ${successCount}, failed ${failCount}. Duplicates may exist.` 
+        });
+      }
+    },
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
   const saveSchool = useMutation({
     mutationFn: () => apiRequest('PUT', `/api/schools/${schoolId}`, { ...schoolForm, logoUrl: logoPreview || schoolForm.logoUrl }),
     onSuccess: () => { toast({ title: 'School info updated' }); },
@@ -130,6 +229,36 @@ export default function SchoolSetup() {
   };
 
   const getYearName = (id: string) => (academicYears as any[]).find(y => y.id === id)?.name ?? '—';
+
+  // Check if subject already exists
+  const subjectExists = (name: string) => {
+    return subjects.some((s: any) => 
+      (s.subject_name?.toLowerCase() === name.toLowerCase()) || 
+      (s.name?.toLowerCase() === name.toLowerCase())
+    );
+  };
+
+  // Get available suggestions (not yet added)
+  const getAvailableSuggestions = (section: string) => {
+    const suggestions = SUBJECT_SUGGESTIONS[section] || [];
+    return suggestions.filter(sub => !subjectExists(sub.name));
+  };
+
+  // Add all suggested subjects for a section
+  const addAllSectionSubjects = (section: string) => {
+    const availableSubs = getAvailableSuggestions(section);
+    if (availableSubs.length === 0) {
+      toast({ title: 'All subjects already added', description: `All ${section} subjects are already in your list.` });
+      return;
+    }
+    bulkAddSubjects.mutate(
+      availableSubs.map(sub => ({
+        name: sub.name,
+        code: sub.code,
+        schoolId: schoolId!,
+      }))
+    );
+  };
 
   return (
     <DirectorLayout>
@@ -408,76 +537,163 @@ export default function SchoolSetup() {
             </Card>
           </TabsContent>
 
-          {/* Subjects — director & school admin (same panel); head teacher uses main Subjects page */}
+          {/* Subjects — Enhanced with Suggestions */}
           <TabsContent value="subjects" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between gap-2">
-                <CardTitle className="text-sm font-semibold text-gray-700">Subjects ({subjects.length})</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingSubject(null);
-                    setSubjectForm({ name: '', code: '', description: '' });
-                    setShowSubjectForm(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 h-8 text-xs gap-1.5 shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add subject
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">
-                    {['Subject Name', 'Code', 'Status', 'Actions'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>)}
-                  </tr></thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {subjects.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
-                          <p>No subjects yet. Use &quot;Add subject&quot; to create English, Mathematics, Science, etc.</p>
-                          <p className="text-xs mt-2 text-gray-500">Head teachers can also add subjects from the main menu → Subjects.</p>
-                        </td>
-                      </tr>
-                    ) : (subjects as any[]).map(s => (
-                      <tr key={s.id} className="hover:bg-gray-50/60">
-                        <td className="px-4 py-3 font-medium text-gray-900">{s.subject_name ?? s.name}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-gray-500">{s.subject_code ?? s.code ?? '—'}</td>
-                        <td className="px-4 py-3"><Badge className="bg-green-100 text-green-700 text-xs">Active</Badge></td>
-                        <td className="px-4 py-3 flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
-                            title="Edit"
-                            onClick={() => {
-                              setEditingSubject(s);
-                              setSubjectForm({
-                                name: s.name ?? s.subject_name ?? '',
-                                code: s.code ?? s.subject_code ?? '',
-                                description: s.description ?? '',
-                              });
-                              setShowSubjectForm(true);
-                            }}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteSubject.mutate(s.id)}
-                            className="h-7 w-7 p-0 text-gray-400 hover:text-red-500"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            <div className="grid lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2">
+                <Card className="border-0 shadow-sm">
+                  <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-semibold text-gray-700">Subjects ({subjects.length})</CardTitle>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditingSubject(null);
+                        setSubjectForm({ name: '', code: '', description: '' });
+                        setShowSubjectForm(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 h-8 text-xs gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add subject
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-gray-50">
+                        {['Subject Name', 'Code', 'Status', 'Actions'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>)}
+                      </tr></thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {subjects.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
+                              <p>No subjects yet. Use "Add subject" or select from suggestions on the right.</p>
+                              <p className="text-xs mt-2 text-gray-500">Head teachers can also add subjects from the main menu → Subjects.</p>
+                            </td>
+                          </tr>
+                        ) : (subjects as any[]).map(s => (
+                          <tr key={s.id} className="hover:bg-gray-50/60">
+                            <td className="px-4 py-3 font-medium text-gray-900">{s.subject_name ?? s.name}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{s.subject_code ?? s.code ?? '—'}</td>
+                            <td className="px-4 py-3"><Badge className="bg-green-100 text-green-700 text-xs">Active</Badge></td>
+                            <td className="px-4 py-3 flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
+                                title="Edit"
+                                onClick={() => {
+                                  setEditingSubject(s);
+                                  setSubjectForm({
+                                    name: s.name ?? s.subject_name ?? '',
+                                    code: s.code ?? s.subject_code ?? '',
+                                    description: s.description ?? '',
+                                  });
+                                  setShowSubjectForm(true);
+                                }}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteSubject.mutate(s.id)}
+                                className="h-7 w-7 p-0 text-gray-400 hover:text-red-500"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Subject Suggestions Panel */}
+              <Card className="border-0 shadow-sm h-fit">
+                <CardHeader className="pb-2 pt-4 px-5">
+                  <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    Quick Add Subjects
+                  </CardTitle>
+                  <p className="text-xs text-gray-400 mt-1">Select a section to see suggested subjects</p>
+                </CardHeader>
+                <CardContent className="px-5 pb-5 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-500">Section</Label>
+                    <Select value={subjectSuggestionSection} onValueChange={setSubjectSuggestionSection}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Nursery">Nursery</SelectItem>
+                        <SelectItem value="Primary">Primary</SelectItem>
+                        <SelectItem value="Secondary">Secondary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Add All Button */}
+                  {getAvailableSuggestions(subjectSuggestionSection).length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => addAllSectionSubjects(subjectSuggestionSection)}
+                      disabled={bulkAddSubjects.isPending}
+                      className="w-full bg-green-600 hover:bg-green-700 h-8 text-xs gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      {bulkAddSubjects.isPending ? 'Adding...' : `Add all ${subjectSuggestionSection} subjects`}
+                    </Button>
+                  )}
+
+                  {/* Individual Subject List */}
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                    {SUBJECT_SUGGESTIONS[subjectSuggestionSection]?.length > 0 ? (
+                      SUBJECT_SUGGESTIONS[subjectSuggestionSection].map((sub) => {
+                        const exists = subjectExists(sub.name);
+                        return (
+                          <div key={sub.code} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-800 truncate">{sub.name}</div>
+                              <div className="text-xs text-gray-400 font-mono">{sub.code}</div>
+                            </div>
+                            {exists ? (
+                              <Badge className="bg-green-100 text-green-700 text-xs ml-2 shrink-0">Added</Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  createSubject.mutate({
+                                    name: sub.name,
+                                    code: sub.code,
+                                    schoolId: schoolId!,
+                                  });
+                                }}
+                                disabled={createSubject.isPending}
+                                className="h-7 text-xs text-blue-600 hover:text-blue-800 px-2 ml-2 shrink-0"
+                              >
+                                + Add
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-gray-400 text-center py-4">No subject suggestions available for this section</p>
+                    )}
+                  </div>
+
+                  {/* Stats */}
+                  <div className="text-xs text-gray-400 pt-2 border-t">
+                    <span className="font-medium">{getAvailableSuggestions(subjectSuggestionSection).length}</span> of{' '}
+                    <span className="font-medium">{SUBJECT_SUGGESTIONS[subjectSuggestionSection]?.length || 0}</span> subjects remaining
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
