@@ -768,7 +768,7 @@ export default function SchoolSetup() {
       {/* Add Academic Year */}
       <Dialog open={showYearForm} onOpenChange={setShowYearForm}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Add Academic Year</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Ecademic Year</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1"><Label>Year Name *</Label><Input value={yearForm.name} onChange={e => setYearForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. 2025/2026" /></div>
             <div className="grid grid-cols-2 gap-3">
