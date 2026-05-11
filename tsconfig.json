@@ -6,9 +6,9 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": true,
+    "downlevelIteration": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
