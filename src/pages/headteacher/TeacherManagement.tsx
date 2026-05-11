@@ -221,12 +221,12 @@ export default function TeacherManagement() {
           <DialogHeader><DialogTitle>Add Teacher Account</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>First Name *</Label><Input value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} /></div>
-              <div><Label>Last Name *</Label><Input value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} /></div>
+              <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} /></div>
+              <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} /></div>
             </div>
-            <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} /></div>
+            <div className="space-y-1.5"><Label>Email *</Label><Input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <div className="space-y-1.5">
                 <Label>Role *</Label>
                 <Select value={form.role} onValueChange={v=>setForm(f=>({...f,role:v}))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -236,9 +236,9 @@ export default function TeacherManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="07XX..." /></div>
+              <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="07XX..." /></div>
             </div>
-            <div><Label>Password *</Label><Input type="password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Set login password" /></div>
+            <div className="space-y-1.5"><Label>Password *</Label><Input type="password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Set login password" /></div>
             <div className="bg-amber-50 rounded-lg p-2.5 text-xs text-amber-700 flex items-center gap-2">
               <ShieldAlert className="w-3.5 h-3.5" />
               You can only create Class Teachers and Subject Teachers.
