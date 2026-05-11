@@ -77,7 +77,6 @@ import GroupingStudio from "@/pages/shared/GroupingStudio";
 import ReportsHub from "@/pages/shared/ReportsHub";
 import TeachingAssignments from "@/pages/shared/TeachingAssignments";
 import { CTLayout } from "@/components/classteacher/CTLayout";
-import { HTLayout } from "@/components/headteacher/HTLayout";
 
 // Generic "any signed-in user" route — used for routes that should work for
 // every role (e.g. /profile). Renders inside the standard Layout so the
@@ -382,13 +381,6 @@ function Router() {
       </Route>
       <Route path="/headteacher/teaching-assignments">
         <HeadTeacherRoute><TeachingAssignments variant="headteacher" /></HeadTeacherRoute>
-      </Route>
-      <Route path="/headteacher/subjects">
-        <HeadTeacherRoute>
-          <HTLayout>
-            <Subjects />
-          </HTLayout>
-        </HeadTeacherRoute>
       </Route>
       <Route path="/headteacher/students">
         <HeadTeacherRoute><HTStudents /></HeadTeacherRoute>

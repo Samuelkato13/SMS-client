@@ -62,8 +62,6 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
 
-  // Vite emits hashed files under /assets/. Do NOT intercept — cache-first SW here
-  // often serves stale HTML or wrong responses and breaks all CSS/JS (unstyled app).
   if (url.pathname.startsWith('/assets/')) {
     return;
   }
@@ -83,7 +81,6 @@ self.addEventListener('fetch', event => {
           const cached = await caches.match(request, { cacheName: API_CACHE });
           if (cached) return cached;
         }
-        // Only fake empty lists for endpoints we explicitly cache (never auth/user, etc.)
         if (shouldCache && url.pathname.startsWith('/api/')) {
           return new Response(JSON.stringify([]), {
             headers: { 'Content-Type': 'application/json', 'X-From-SW-Cache': 'true' }

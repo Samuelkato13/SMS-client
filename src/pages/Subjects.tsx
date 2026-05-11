@@ -30,6 +30,10 @@ export default function Subjects() {
     queryFn: () => fetch(`/api/subjects?schoolId=${schoolId}`).then(r => r.json()),
     enabled: !!schoolId,
   });
+  const { data: subjectCatalog } = useQuery<{ subjects: { name: string; code: string }[] }>({
+    queryKey: ['/api/subject-templates'],
+    queryFn: () => fetch('/api/subject-templates', { credentials: 'include' }).then((r) => r.json()),
+  });
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest('POST', '/api/subjects', data),
@@ -41,6 +45,30 @@ export default function Subjects() {
     },
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
+
+  const importFromCatalog = useMutation({
+    mutationFn: async (codes?: string[]) => {
+      const res = await apiRequest('POST', '/api/subjects/import-templates', {
+        schoolId,
+        ...(codes?.length ? { codes } : {}),
+      });
+      return res.json() as Promise<{ created: number }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/subjects', schoolId] });
+      toast({
+        title: data.created > 0 ? `Added ${data.created} from catalog` : 'Already in sync',
+        description: data.created === 0 ? 'Every catalog subject is already on your list.' : undefined,
+      });
+    },
+    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+  });
+
+  const catalog = subjectCatalog?.subjects ?? [];
+  const schoolCodes = new Set(
+    subjects.map((s) => String(s.code ?? s.subject_code ?? '').trim().toUpperCase()).filter(Boolean),
+  );
+  const catalogMissing = catalog.filter((t) => !schoolCodes.has(t.code.toUpperCase()));
 
   const categoryColors: Record<string, string> = {
     Core: 'bg-blue-100 text-blue-700',
@@ -81,9 +109,11 @@ export default function Subjects() {
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
                     </div>
                     <div>
-                      <Label>Code</Label>
+                      <Label>Code *</Label>
                       <Input placeholder="e.g. MATH" value={form.code}
-                        onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
+                        onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                        required
+                        maxLength={50} />
                     </div>
                   </div>
                   <div>
@@ -106,6 +136,51 @@ export default function Subjects() {
             </Dialog>
           )}
         </div>
+
+        {canCreate('subjects') && schoolId && (
+          <Card className="border-indigo-100 bg-indigo-50/40 shadow-sm">
+            <CardHeader className="py-3 px-4 pb-0">
+              <CardTitle className="text-sm font-semibold text-indigo-900">Platform catalog</CardTitle>
+              <p className="text-xs text-indigo-800/90 font-normal leading-relaxed pt-1">
+                Same list as Super Admin → <span className="font-medium">System Settings → Global Subject Pool</span>.
+                Add missing subjects to your school in one click, or use &quot;Add Subject&quot; for custom ones.
+              </p>
+            </CardHeader>
+            <CardContent className="py-3 px-4 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={importFromCatalog.isPending || catalogMissing.length === 0}
+                  onClick={() => importFromCatalog.mutate(undefined)}
+                >
+                  {importFromCatalog.isPending ? 'Adding…' : `Add all missing (${catalogMissing.length})`}
+                </Button>
+                {catalogMissing.length === 0 && catalog.length > 0 && (
+                  <span className="text-xs text-indigo-900/70 self-center">Catalog fully added.</span>
+                )}
+              </div>
+              {catalogMissing.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {catalogMissing.map((t) => (
+                    <Button
+                      key={t.code}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[11px] bg-white/80 border-indigo-200 text-indigo-900"
+                      disabled={importFromCatalog.isPending}
+                      onClick={() => importFromCatalog.mutate([t.code])}
+                    >
+                      + {t.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {isLoading ? (
           <Card><CardContent className="h-40 animate-pulse bg-gray-50 rounded mt-4" /></Card>

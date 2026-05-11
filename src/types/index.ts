@@ -20,7 +20,7 @@ import type {
   Payment,
   InsertPayment,
   UserRole,
-} from "@/shared/schema";
+} from "@shared/schema";
 
 export type {
   School,

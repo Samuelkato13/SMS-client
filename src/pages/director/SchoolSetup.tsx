@@ -125,6 +125,10 @@ export default function SchoolSetup() {
   const { data: classes = [] } = useQuery<any[]>({ queryKey: ['/api/classes', schoolId], queryFn: () => fetch(`/api/classes?schoolId=${schoolId}`).then(r => r.json()), enabled: !!schoolId });
   const { data: streams = [] } = useQuery<any[]>({ queryKey: ['/api/streams', schoolId], queryFn: () => fetch(`/api/streams?schoolId=${schoolId}`).then(r => r.json()), enabled: !!schoolId });
   const { data: subjects = [] } = useQuery<any[]>({ queryKey: ['/api/subjects', schoolId], queryFn: () => fetch(`/api/subjects?schoolId=${schoolId}`).then(r => r.json()), enabled: !!schoolId });
+  const { data: subjectCatalog } = useQuery<{ subjects: { name: string; code: string }[] }>({
+    queryKey: ['/api/subject-templates'],
+    queryFn: () => fetch('/api/subject-templates', { credentials: 'include' }).then((r) => r.json()),
+  });
 
   const createYear = useMutation({ mutationFn: (d: any) => apiRequest('POST', '/api/academic-years', d), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/academic-years', schoolId] }); toast({ title: 'Academic year created' }); setShowYearForm(false); setYearForm({ name: '', startDate: '', endDate: '', isActive: false }); } });
   const createTerm = useMutation({ mutationFn: (d: any) => apiRequest('POST', '/api/terms', d), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/terms', schoolId] }); toast({ title: 'Term created' }); setShowTermForm(false); } });
@@ -161,6 +165,23 @@ export default function SchoolSetup() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/subjects', schoolId] });
       toast({ title: 'Subject removed' });
+    },
+    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+  const importSubjectsFromCatalog = useMutation({
+    mutationFn: async (codes?: string[]) => {
+      const res = await apiRequest('POST', '/api/subjects/import-templates', {
+        schoolId,
+        ...(codes?.length ? { codes } : {}),
+      });
+      return res.json() as Promise<{ created: number }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/subjects', schoolId] });
+      toast({
+        title: data.created > 0 ? `Added ${data.created} from catalog` : 'Catalog already in sync',
+        description: data.created === 0 ? 'Every catalog subject is already on your school list.' : undefined,
+      });
     },
     onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
@@ -232,8 +253,8 @@ export default function SchoolSetup() {
 
   // Check if subject already exists
   const subjectExists = (name: string) => {
-    return subjects.some((s: any) => 
-      (s.subject_name?.toLowerCase() === name.toLowerCase()) || 
+    return subjects.some((s: any) =>
+      (s.subject_name?.toLowerCase() === name.toLowerCase()) ||
       (s.name?.toLowerCase() === name.toLowerCase())
     );
   };
@@ -259,6 +280,14 @@ export default function SchoolSetup() {
       }))
     );
   };
+
+  const catalog = subjectCatalog?.subjects ?? [];
+  const schoolCodes = new Set(
+    (subjects as { code?: string; subject_code?: string }[]).map((s) =>
+      String(s.code ?? s.subject_code ?? '').trim().toUpperCase(),
+    ).filter(Boolean),
+  );
+  const catalogMissing = catalog.filter((t) => !schoolCodes.has(t.code.toUpperCase()));
 
   return (
     <DirectorLayout>
@@ -537,7 +566,7 @@ export default function SchoolSetup() {
             </Card>
           </TabsContent>
 
-          {/* Subjects — Enhanced with Suggestions */}
+          {/* Subjects — catalog + table + section suggestions */}
           <TabsContent value="subjects" className="mt-4">
             <div className="grid lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2">
@@ -558,6 +587,44 @@ export default function SchoolSetup() {
                     </Button>
                   </CardHeader>
                   <CardContent className="p-0">
+                    <div className="px-5 py-4 bg-slate-50/90 border-b border-gray-100 space-y-3">
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        <span className="font-semibold text-gray-800">Platform catalog</span> — same list as Super Admin →{' '}
+                        <span className="font-medium text-gray-800">System Settings → Global Subject Pool</span>.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 text-xs"
+                          disabled={!schoolId || importSubjectsFromCatalog.isPending || catalogMissing.length === 0}
+                          onClick={() => importSubjectsFromCatalog.mutate(undefined)}
+                        >
+                          {importSubjectsFromCatalog.isPending ? 'Adding…' : `Add all catalog subjects (${catalogMissing.length} missing)`}
+                        </Button>
+                        {catalogMissing.length === 0 && catalog.length > 0 && (
+                          <span className="text-xs text-gray-500">All catalog subjects are on your list.</span>
+                        )}
+                      </div>
+                      {catalogMissing.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {catalogMissing.map((t) => (
+                            <Button
+                              key={t.code}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[11px] font-normal"
+                              disabled={importSubjectsFromCatalog.isPending}
+                              onClick={() => importSubjectsFromCatalog.mutate([t.code])}
+                            >
+                              + {t.name}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <table className="w-full text-sm">
                       <thead><tr className="border-b bg-gray-50">
                         {['Subject Name', 'Code', 'Status', 'Actions'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>)}
@@ -566,7 +633,7 @@ export default function SchoolSetup() {
                         {subjects.length === 0 ? (
                           <tr>
                             <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
-                              <p>No subjects yet. Use "Add subject" or select from suggestions on the right.</p>
+                              <p>No subjects yet. Use &quot;Add subject&quot;, the platform catalog above, or suggestions on the right.</p>
                               <p className="text-xs mt-2 text-gray-500">Head teachers can also add subjects from the main menu → Subjects.</p>
                             </td>
                           </tr>
