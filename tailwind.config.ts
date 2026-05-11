@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 const path = require("path");
 
-// Paths must be absolute from this file so Tailwind scans `client/src` even when
-// the process cwd is the monorepo root (Vite `npm run build` from repo root).
+// `.cjs` so `require()` works when package.json has `"type": "module"`.
+// Absolute globs from this file so Tailwind scans `client/src` regardless of cwd.
 const clientRoot = __dirname;
 
 module.exports = {
