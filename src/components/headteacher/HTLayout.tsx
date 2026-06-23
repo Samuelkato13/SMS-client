@@ -4,7 +4,7 @@ import { ZaabuPayLogo } from '@/components/ui/ZaabuPayLogo';
 import {
   LayoutDashboard, CalendarDays, Users, UserSquare2, ClipboardList,
   BarChart3, FileText, CreditCard, Menu, LogOut, ChevronRight,
-  Bell, X, TrendingUp, Layers, ListChecks
+  Bell, X, TrendingUp, Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,7 +17,6 @@ const NAV: NavItem[] = [
   { label: 'Dashboard',           href: '/headteacher',                 icon: LayoutDashboard },
   { label: 'Academic Calendar',   href: '/headteacher/calendar',        icon: CalendarDays    },
   { label: 'Teacher Management',  href: '/headteacher/teachers',        icon: Users           },
-  { label: 'Teaching assignments', href: '/headteacher/teaching-assignments', icon: ListChecks },
   { label: 'Students',            href: '/headteacher/students',        icon: UserSquare2     },
   { label: 'Exam Management',     href: '/headteacher/exams',           icon: ClipboardList   },
   { label: 'Reports Hub',          href: '/headteacher/performance',     icon: BarChart3       },
@@ -110,11 +109,7 @@ export function HTLayout({ children }: { children: ReactNode }) {
               <Bell className="w-4 h-4 text-gray-500" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>
             </button>
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 pl-2 border-l border-gray-200 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors"
-              title="View profile"
-            >
+            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
               <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                 {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
               </div>
@@ -122,7 +117,7 @@ export function HTLayout({ children }: { children: ReactNode }) {
                 <p className="text-xs font-semibold text-gray-800">{profile?.firstName} {profile?.lastName}</p>
                 <p className="text-[10px] text-gray-400">Head Teacher</p>
               </div>
-            </Link>
+            </div>
           </div>
         </header>
 

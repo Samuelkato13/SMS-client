@@ -1,16 +1,8 @@
-/** @type {import('tailwindcss').Config} */
-const path = require("path");
+import type { Config } from "tailwindcss";
 
-// `.cjs` so `require()` works when package.json has `"type": "module"`.
-// Absolute globs from this file so Tailwind scans `client/src` regardless of cwd.
-const clientRoot = __dirname;
-
-module.exports = {
+export default {
   darkMode: ["class"],
-  content: [
-    path.join(clientRoot, "index.html"),
-    path.join(clientRoot, "src", "**", "*.{js,jsx,ts,tsx}"),
-  ],
+  content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       borderRadius: {
@@ -72,12 +64,20 @@ module.exports = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
+          from: {
+            height: "0",
+          },
+          to: {
+            height: "var(--radix-accordion-content-height)",
+          },
         },
         "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          from: {
+            height: "var(--radix-accordion-content-height)",
+          },
+          to: {
+            height: "0",
+          },
         },
       },
       animation: {
@@ -87,4 +87,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-};
+} satisfies Config;

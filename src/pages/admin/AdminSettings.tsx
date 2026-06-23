@@ -128,25 +128,21 @@ export default function AdminSettings() {
 
         {/* Global subject pool */}
         <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3 pt-4 px-5 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
+          <CardHeader className="pb-3 pt-4 px-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-indigo-600" />
                 <CardTitle className="text-sm font-semibold text-gray-700">Global Subject Pool</CardTitle>
                 <Badge className="bg-indigo-100 text-indigo-700 text-xs">{subjects.length} subjects</Badge>
               </div>
-              <Button onClick={openAddSubject} size="sm" variant="outline" className="gap-1 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50 shrink-0">
+              <Button onClick={openAddSubject} size="sm" variant="outline" className="gap-1 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50">
                 <Plus className="w-3.5 h-3.5" />Add Subject
               </Button>
             </div>
-            <p className="text-xs text-gray-500 max-w-2xl leading-relaxed">
-              Directors and head teachers copy these into their school from <span className="font-medium text-gray-700">School Setup → Subjects</span> or{' '}
-              <span className="font-medium text-gray-700">Subjects</span> (&quot;Platform catalog&quot;) — the same list you manage here.
-            </p>
           </CardHeader>
           <CardContent className="px-5 pb-4">
             {subjects.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">No catalog entries stored yet. Defaults still apply until you add subjects; schools can import from the catalog when it is saved.</p>
+              <p className="text-sm text-gray-400 py-4 text-center">No global subjects added yet. Schools can add their own.</p>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {subjects.map((s: any) => (

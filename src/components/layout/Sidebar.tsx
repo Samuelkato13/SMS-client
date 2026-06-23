@@ -8,7 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import {
   GraduationCap, Home, Users, BookOpen, FileText, Star,
   CheckSquare, DollarSign, CreditCard, UsersRound,
-  BarChart3, School, Building2, ClipboardList, Network,
+  BarChart3, School, Building2, ClipboardList,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,7 +30,6 @@ const iconMap: Record<string, React.ElementType> = {
   chart: BarChart3,
   'building-office': School,
   clipboard: ClipboardList,
-  network: Network,
 };
 
 const GROUP_LABELS: Record<string, string> = {
@@ -136,14 +135,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           })}
         </nav>
 
-        {/* User Profile Footer (click → /profile) */}
+        {/* User Profile Footer */}
         <div className="p-4 border-t border-white/10">
-          <Link
-            href="/profile"
-            onClick={() => onClose()}
-            className="flex items-center space-x-3 px-2 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-            title="View profile"
-          >
+          <div className="flex items-center space-x-3 px-2 py-2 rounded-xl bg-white/5">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
               style={{
@@ -159,10 +153,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 {profile?.firstName} {profile?.lastName}
               </p>
               <p className="text-xs text-white/40 capitalize truncate">
-                {theme.label} · View profile
+                {theme.label}
               </p>
             </div>
-          </Link>
+          </div>
         </div>
       </aside>
     </>

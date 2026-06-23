@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DirectorLayout } from '@/components/director/DirectorLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,89 +58,6 @@ const TOGGLES = [
   { key: 'showSignatures', label: 'Signature Lines' },
 ] as const;
 
-function schoolLogoUrl(school: Record<string, unknown> | null | undefined): string | null {
-  const raw = school?.logo_url ?? school?.logoUrl;
-  if (typeof raw !== 'string' || !raw.trim()) return null;
-  return raw.trim();
-}
-
-function schoolAbbreviation(school: Record<string, unknown> | null | undefined): string {
-  const abbr = school?.abbreviation;
-  const name = school?.name;
-  if (typeof abbr === 'string' && abbr.trim()) return abbr.trim().slice(0, 4).toUpperCase();
-  if (typeof name === 'string' && name.trim()) {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    const letters = parts.slice(0, 3).map((w) => w[0]).join('');
-    return (letters || 'SCH').toUpperCase().slice(0, 4);
-  }
-  return 'SCH';
-}
-
-/** Shared header: logo or initials badge + school name (used in live + modal previews). */
-function ReportCardHeader({
-  config,
-  school,
-  compact,
-}: {
-  config: TemplateConfig;
-  school: Record<string, unknown> | null | undefined;
-  compact?: boolean;
-}) {
-  const logo = schoolLogoUrl(school);
-  const badge = schoolAbbreviation(school);
-  const name = typeof school?.name === 'string' ? school.name : 'SCHOOL NAME';
-  const address = typeof school?.address === 'string' && school.address.trim()
-    ? school.address
-    : 'School Address, Uganda';
-
-  if (compact) {
-    return (
-      <div className="p-2 text-center text-white text-xs font-bold" style={{ backgroundColor: config.primaryColor }}>
-        <div className="flex items-center justify-center gap-2">
-          {logo ? (
-            <img src={logo} alt="" className="h-8 w-8 rounded-md object-contain bg-white/10 border border-white/20 shrink-0" />
-          ) : (
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 border border-white/25 text-[10px] font-extrabold tracking-tight shrink-0">
-              {badge}
-            </span>
-          )}
-          <div className="text-left min-w-0">
-            <div className="truncate">{name}</div>
-            <div className="text-[9px] font-normal opacity-90 truncate">{address}</div>
-          </div>
-        </div>
-        <div className="text-[9px] font-normal mt-1 opacity-95">PROGRESS REPORT CARD · {config.section.toUpperCase()}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 text-white text-center" style={{ backgroundColor: config.primaryColor }}>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-        {logo ? (
-          <img
-            src={logo}
-            alt=""
-            className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-contain bg-white/10 border border-white/25 shadow-sm shrink-0"
-          />
-        ) : (
-          <div
-            className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl flex items-center justify-center text-lg sm:text-xl font-black tracking-wide border-2 border-white/40 bg-white/10 shrink-0 shadow-inner"
-            aria-hidden
-          >
-            {badge}
-          </div>
-        )}
-        <div className="min-w-0 text-center sm:text-left">
-          <p className="text-xl font-bold leading-tight">{name}</p>
-          <p className="text-sm opacity-90 mt-1">{address}</p>
-          <p className="text-sm font-semibold mt-2">END OF TERM PROGRESS REPORT — {config.section.toUpperCase()}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ReportStudio() {
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -159,25 +76,10 @@ export default function ReportStudio() {
     const idx = existing.findIndex((t: any) => t.name === config.name);
     if (idx >= 0) existing[idx] = config; else existing.push(config);
     localStorage.setItem('reportTemplates', JSON.stringify(existing));
-    if (schoolId) {
-      try {
-        localStorage.setItem(`reportStudioTemplate:${schoolId}`, JSON.stringify(config));
-      } catch (_) {}
-    }
     setSaved(true);
-    toast({ title: 'Template saved', description: `"${config.name}" saved for this browser` });
+    toast({ title: 'Template saved', description: `"${config.name}" saved successfully` });
     setTimeout(() => setSaved(false), 2000);
   };
-
-  useEffect(() => {
-    if (!schoolId) return;
-    try {
-      const raw = localStorage.getItem(`reportStudioTemplate:${schoolId}`);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<TemplateConfig>;
-      setConfig((c) => ({ ...DEFAULT_CONFIG, ...c, name: parsed.name ?? c.name }));
-    } catch (_) {}
-  }, [schoolId]);
 
   const savedTemplates: TemplateConfig[] = JSON.parse(localStorage.getItem('reportTemplates') ?? '[]');
 
@@ -187,9 +89,7 @@ export default function ReportStudio() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Report Studio</h1>
-            <p className="text-sm text-gray-500">
-              Design report card layout here. Logo comes from <span className="font-medium text-gray-700">School Setup → School Info</span> (uploaded logo); if none, initials are shown. Saving stores the template in this browser only until exports use it server-side.
-            </p>
+            <p className="text-sm text-gray-500">Design and customise report card templates</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowPreview(true)} className="gap-2"><Eye className="w-4 h-4" />Preview</Button>
@@ -281,35 +181,28 @@ export default function ReportStudio() {
               <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Preview</CardTitle></CardHeader>
               <CardContent className="p-3">
                 <div className="border rounded-md overflow-hidden text-xs" style={{ fontFamily: config.fontFamily }}>
-                  {config.showLogo && <ReportCardHeader config={config} school={school as any} compact />}
+                  {config.showLogo && (
+                    <div className="p-2 text-center text-white text-xs font-bold" style={{ backgroundColor: config.primaryColor }}>
+                      {school?.name ?? 'School Name'}
+                      <div className="text-[9px] font-normal mt-0.5">PROGRESS REPORT CARD · {config.section.toUpperCase()}</div>
+                    </div>
+                  )}
                   <div className="p-2 bg-white space-y-1">
-                    <div className="flex justify-between text-[9px] text-gray-600 border-b pb-1 gap-2">
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        {config.showPhoto && (
-                          <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-[8px] font-bold shrink-0">
-                            JD
-                          </span>
-                        )}
-                        <span className="truncate">Name: <b>John Doe</b></span>
-                      </span>
-                      <span className="shrink-0">Class: <b>P.4</b></span>
+                    <div className="flex justify-between text-[9px] text-gray-600 border-b pb-1">
+                      <span>Name: <b>John Doe</b></span>
+                      <span>Class: <b>P.4</b></span>
                     </div>
                     <div className="text-[9px] text-gray-500 space-y-0.5">
                       {config.showAttendance && <div>Attendance: <b>87/90 days</b></div>}
                       {config.showClassPosition && <div>Position: <b>3rd / 42</b></div>}
                     </div>
-                    {config.showMotivation && (
-                      <p className="text-[9px] text-center text-amber-800/90 italic border border-amber-100 bg-amber-50/80 rounded px-1 py-0.5">
-                        &ldquo;Excellence is a habit.&rdquo;
-                      </p>
-                    )}
                     <div className="text-[9px] border rounded overflow-hidden mt-1">
                       <div className="bg-gray-100 px-1 py-0.5 font-semibold text-gray-600 grid grid-cols-3"><span>Subject</span><span className="text-center">Score</span><span className="text-center">Grade</span></div>
                       {['English', 'Math', 'Science'].map(s => (
                         <div key={s} className="px-1 py-0.5 grid grid-cols-3 text-gray-600 border-t"><span>{s}</span><span className="text-center">76</span><span className="text-center text-green-600">C3</span></div>
                       ))}
                     </div>
-                    {config.showRemarks && <div className="text-[9px] text-gray-500 italic mt-1">&ldquo;Keep up the good work!&rdquo;</div>}
+                    {config.showRemarks && <div className="text-[9px] text-gray-500 italic mt-1">"Keep up the good work!"</div>}
                     {config.showSignatures && (
                       <div className="flex justify-between text-[9px] text-gray-400 mt-2 pt-1 border-t">
                         <span>Class Teacher: ____</span><span>Director: ____</span>
@@ -329,33 +222,24 @@ export default function ReportStudio() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Report Card Preview</DialogTitle></DialogHeader>
           <div className="border rounded-lg overflow-hidden shadow-md" style={{ fontFamily: config.fontFamily }}>
-            {/* Header: logo / badge + name (matches "School Logo & Name" toggle) */}
-            {config.showLogo && <ReportCardHeader config={config} school={school as any} />}
+            {/* Header */}
+            {config.showLogo && (
+              <div className="p-4 text-white text-center" style={{ backgroundColor: config.primaryColor }}>
+                <p className="text-xl font-bold">{school?.name ?? 'SCHOOL NAME'}</p>
+                <p className="text-sm opacity-80">{school?.address ?? 'School Address, Uganda'}</p>
+                <p className="text-sm font-semibold mt-1">END OF TERM PROGRESS REPORT — {config.section.toUpperCase()}</p>
+              </div>
+            )}
             {/* Student details */}
             <div className="p-4 bg-gray-50 border-b">
-              <div className={`grid gap-3 text-sm ${config.showPhoto ? 'sm:grid-cols-[auto_1fr]' : 'grid-cols-2'}`}>
-                {config.showPhoto && (
-                  <div className="flex sm:flex-col items-center gap-2 sm:items-start">
-                    <div className="h-20 w-20 rounded-xl bg-blue-100 border-2 border-blue-200 flex items-center justify-center text-blue-800 text-lg font-bold shrink-0">
-                      JW
-                    </div>
-                    <p className="text-xs text-gray-500 sm:hidden">Student photo (sample)</p>
-                  </div>
-                )}
-                <div className={`grid grid-cols-2 gap-2 ${config.showPhoto ? 'min-w-0' : ''}`}>
-                  <div className="col-span-2 sm:col-span-1"><span className="text-gray-500">Student Name:</span> <b>JOHN WILLIAM DOE</b></div>
-                  <div><span className="text-gray-500">Adm No:</span> <b>2025/001</b></div>
-                  <div><span className="text-gray-500">Class:</span> <b>Primary 4</b></div>
-                  <div><span className="text-gray-500">Term:</span> <b>Term I · 2025</b></div>
-                  {config.showAttendance && <div><span className="text-gray-500">Days Attended:</span> <b>87 / 90</b></div>}
-                  {config.showClassPosition && <div><span className="text-gray-500">Class Position:</span> <b>3rd / 42 students</b></div>}
-                </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-gray-500">Student Name:</span> <b>JOHN WILLIAM DOE</b></div>
+                <div><span className="text-gray-500">Adm No:</span> <b>2025/001</b></div>
+                <div><span className="text-gray-500">Class:</span> <b>Primary 4</b></div>
+                <div><span className="text-gray-500">Term:</span> <b>Term I · 2025</b></div>
+                {config.showAttendance && <div><span className="text-gray-500">Days Attended:</span> <b>87 / 90</b></div>}
+                {config.showClassPosition && <div><span className="text-gray-500">Class Position:</span> <b>3rd / 42 students</b></div>}
               </div>
-              {config.showMotivation && (
-                <p className="mt-3 text-sm text-center italic text-amber-900/90 border border-amber-100 bg-amber-50 rounded-lg px-3 py-2">
-                  &ldquo;Success is the sum of small efforts, repeated day in and day out.&rdquo;
-                </p>
-              )}
             </div>
             {/* Marks table */}
             <div className="p-4">
@@ -374,30 +258,18 @@ export default function ReportStudio() {
                 </tbody>
               </table>
             </div>
-            {/* Comments + signatures (remarks text optional; signatures optional) */}
-            {(config.showRemarks || config.showSignatures) && (
+            {/* Comments */}
+            {config.showRemarks && (
               <div className="px-4 pb-4 grid sm:grid-cols-2 gap-3">
                 <div className="border rounded p-2.5">
                   <p className="text-xs font-semibold text-gray-600 mb-1">{config.headTeacherTitle}</p>
-                  {config.showRemarks && (
-                    <p className="text-xs text-gray-500 italic">
-                      &ldquo;John has performed well this term. Encourage him to work on mathematics.&rdquo;
-                    </p>
-                  )}
-                  {config.showSignatures && (
-                    <p className={`text-xs text-gray-400 ${config.showRemarks ? 'mt-2' : 'mt-1'}`}>Signature: ___________________</p>
-                  )}
+                  <p className="text-xs text-gray-500 italic">"John has performed well this term. Encourage him to work on mathematics."</p>
+                  <p className="text-xs text-gray-400 mt-2">Signature: ___________________</p>
                 </div>
                 <div className="border rounded p-2.5">
                   <p className="text-xs font-semibold text-gray-600 mb-1">{config.directorTitle}</p>
-                  {config.showRemarks && (
-                    <p className="text-xs text-gray-500 italic">
-                      &ldquo;Keep up the excellent performance. We are proud of your progress.&rdquo;
-                    </p>
-                  )}
-                  {config.showSignatures && (
-                    <p className={`text-xs text-gray-400 ${config.showRemarks ? 'mt-2' : 'mt-1'}`}>Signature: ___________________</p>
-                  )}
+                  <p className="text-xs text-gray-500 italic">"Keep up the excellent performance. We are proud of your progress."</p>
+                  <p className="text-xs text-gray-400 mt-2">Signature: ___________________</p>
                 </div>
               </div>
             )}
